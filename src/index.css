@@ -1,0 +1,86 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #32204f;
+  background: #f7f5fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 3px solid #b28ae8;
+  outline-offset: 3px;
+}
+
+
+@keyframes orbi-flotar {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes orbi-saludar {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  30% {
+    transform: rotate(-8deg) scale(1.06);
+  }
+
+  65% {
+    transform: rotate(8deg) scale(1.06);
+  }
+}
+
+@keyframes orbi-celebrar {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+
+  30% {
+    transform: translateY(-12px) scale(1.1);
+  }
+
+  60% {
+    transform: translateY(-4px) scale(1.04);
+  }
+}
+
+.orbi-flotando {
+  animation: orbi-flotar 3.5s ease-in-out infinite;
+}
+
+.orbi-saludando {
+  animation: orbi-saludar 0.7s ease-in-out;
+}
+
+.orbi-celebrando {
+  animation: orbi-celebrar 0.8s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbi-flotando,
+  .orbi-saludando,
+  .orbi-celebrando {
+    animation: none;
+  }
+}
