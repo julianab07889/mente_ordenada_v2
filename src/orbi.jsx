@@ -1,12 +1,12 @@
 
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
-  Bot, Eye, EyeOff, Lightbulb, X,
-  ChevronUp, Settings2, Sparkles
+  Eye, EyeOff, Lightbulb, X, Settings2, Sparkles
 } from 'lucide-react'
 import { useFinanzas } from './finanzas.js'
+import { useOrbi, actualizarPreferencias, EVENTO_REACCION } from './orbiEstado.js'
 
 import orbiNormal from './assets/orbi/orbi-normal.png'
 import orbiFeliz from './assets/orbi/orbi-feliz.png'
@@ -19,7 +19,7 @@ import orbiAudifonos from './assets/orbi/orbi-audifonos.png'
 import orbiCorbatin from './assets/orbi/orbi-corbatin.png'
 
 
-export const imagenesOrbi = {
+const imagenesOrbi = {
   normal: orbiNormal,
   feliz: orbiFeliz,
   pensando: orbiPensando,
@@ -46,66 +46,6 @@ const accesoriosOrbi = [
   { id: 'corbatin', nombre: 'Corbatín' }
 ]
 
-
-const CLAVE = 'mente_ordenada_orbi_preferencias'
-const EVENTO = 'mente_ordenada_orbi_cambio'
-
-
-const INICIAL = {
-  visible: true,
-  consejos: true,
-  variante: 'normal'
-}
-
-
-function suscribir(actualizar) {
-  window.addEventListener(EVENTO, actualizar)
-  window.addEventListener('storage', actualizar)
-
-  return () => {
-    window.removeEventListener(EVENTO, actualizar)
-    window.removeEventListener('storage', actualizar)
-  }
-}
-
-function obtenerSnapshot() {
-  return localStorage.getItem(CLAVE) || ''
-}
-
-function leerPreferencias(texto) {
-  try {
-    const guardadas = JSON.parse(texto)
-    return {
-      ...INICIAL,
-      ...(guardadas && typeof guardadas === 'object'
-        ? guardadas
-        : {})
-    }
-  } catch {
-    return INICIAL
-  }
-}
-
-export function useOrbi() {
-  const texto = useSyncExternalStore(
-    suscribir,
-    obtenerSnapshot,
-    () => ''
-  )
-
-  return leerPreferencias(texto)
-}
-
-function actualizarPreferencias(cambios) {
-  const actuales = leerPreferencias(obtenerSnapshot())
-
-  localStorage.setItem(
-    CLAVE,
-    JSON.stringify({ ...actuales, ...cambios })
-  )
-
-  window.dispatchEvent(new Event(EVENTO))
-}
 
 function mensajeFinanciero(movimientos) {
   const hoy = new Date()
@@ -149,6 +89,54 @@ function mensajeFinanciero(movimientos) {
 }
 
 
+function Selector({ titulo, opciones, variante, seleccionarVariante }) {
+  return (
+    <div className="space-y-3">
+      <h4 className="font-bold text-[#542486]">
+        {titulo}
+      </h4>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {opciones.map(opcion => {
+          const seleccionado = variante === opcion.id
+
+          return (
+            <button
+              key={opcion.id}
+              type="button"
+              onClick={() => seleccionarVariante(opcion.id)}
+              aria-pressed={seleccionado}
+              className={`rounded-2xl border-2 p-3
+                          transition-all hover:bg-[#F7F0FF]
+                ${seleccionado
+                  ? 'border-[#8953C8] bg-[#F2E8FC]'
+                  : 'border-[#EEE7F5] bg-white'}`}
+            >
+              <img
+                src={imagenesOrbi[opcion.id]}
+                alt=""
+                className="mx-auto h-20 w-20 object-contain"
+              />
+
+              <span className="mt-2 block text-xs
+                               font-bold text-[#6532A6]">
+                {opcion.nombre}
+              </span>
+
+              {seleccionado && (
+                <span className="mt-1 block text-xs
+                                 text-[#7540B8]">
+                  ✓ Seleccionado
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function OrbiPanel() {
   const preferencias = useOrbi()
 
@@ -170,54 +158,6 @@ export function OrbiPanel() {
     actualizarPreferencias({
       consejos: evento.target.checked
     })
-  }
-
-  function Selector({ titulo, opciones }) {
-    return (
-      <div className="space-y-3">
-        <h4 className="font-bold text-[#542486]">
-          {titulo}
-        </h4>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {opciones.map(opcion => {
-            const seleccionado = variante === opcion.id
-
-            return (
-              <button
-                key={opcion.id}
-                type="button"
-                onClick={() => seleccionarVariante(opcion.id)}
-                aria-pressed={seleccionado}
-                className={`rounded-2xl border-2 p-3
-                            transition-all hover:bg-[#F7F0FF]
-                  ${seleccionado
-                    ? 'border-[#8953C8] bg-[#F2E8FC]'
-                    : 'border-[#EEE7F5] bg-white'}`}
-              >
-                <img
-                  src={imagenesOrbi[opcion.id]}
-                  alt=""
-                  className="mx-auto h-20 w-20 object-contain"
-                />
-
-                <span className="mt-2 block text-xs
-                                 font-bold text-[#6532A6]">
-                  {opcion.nombre}
-                </span>
-
-                {seleccionado && (
-                  <span className="mt-1 block text-xs
-                                   text-[#7540B8]">
-                    ✓ Seleccionado
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -282,6 +222,8 @@ export function OrbiPanel() {
             <Selector
               titulo="Expresiones"
               opciones={expresionesOrbi}
+              variante={variante}
+              seleccionarVariante={seleccionarVariante}
             />
 
             <div className="border-t border-[#EEE7F5]" />
@@ -289,6 +231,8 @@ export function OrbiPanel() {
             <Selector
               titulo="Accesorios"
               opciones={accesoriosOrbi}
+              variante={variante}
+              seleccionarVariante={seleccionarVariante}
             />
           </div>
 
@@ -393,16 +337,6 @@ export function OrbiPanel() {
 }
 
 
-const EVENTO_REACCION = 'mente_ordenada_orbi_reaccion'
-
-export function avisarOrbi(tipo) {
-  window.dispatchEvent(
-    new CustomEvent(EVENTO_REACCION, {
-      detail: { tipo }
-    })
-  )
-}
-
 const REACCIONES = {
   ingreso: {
     imagen: 'feliz',
@@ -461,9 +395,12 @@ const [saludando, setSaludando] = useState(false)
         EVENTO_REACCION,
         reaccionar
       )
-      clearTimeout(temporizador.current)
     }
   }, [preferencias.visible, preferencias.consejos])
+
+  useEffect(() => {
+    return () => clearTimeout(temporizador.current)
+  }, [])
 
   if (!preferencias.visible) return null
 
@@ -540,8 +477,7 @@ const animacionOrbi =
 
 onMouseEnter={() => setSaludando(true)}
 onMouseLeave={() => setSaludando(false)}
-
-        aria-label={
+aria-label={
           expandido
             ? 'Cerrar mensaje de Orbi'
             : 'Mostrar mensaje de Orbi'

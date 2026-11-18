@@ -1,5 +1,5 @@
 
-import { avisarOrbi } from './orbi.jsx'
+import { avisarOrbi } from './orbiEstado.js'
 
 import { useState } from 'react'
 import {

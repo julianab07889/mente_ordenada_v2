@@ -1,5 +1,9 @@
 
-import { createWorker } from 'tesseract.js'
+import { leerComprobante, esPDF } from './leerComprobante.js'
+import { extraerComprobante } from './extraerComprobante.js'
+import { confirmarFactura, fechaLocal, huellaComprobante, useFacturas } from './facturas.js'
+import { CuentaFactura, FacturasPendientes } from './facturasUI.jsx'
+import { avisarOrbi } from './orbiEstado.js'
 
 import { useEffect, useState } from 'react'
 import {
@@ -7,12 +11,7 @@ import {
   CheckCircle2, AlertCircle, Wallet
 } from 'lucide-react'
 
-import {
-  useFinanzas,
-  guardarMovimientos,
-  saldoActual,
-  formatoCOP
-} from './finanzas.js'
+import { useFinanzas } from './finanzas.js'
 
 const categorias = [
   'Alimentación',
@@ -26,48 +25,39 @@ const categorias = [
   'Otros'
 ]
 
-function fechaHoy() {
-  const hoy = new Date()
-
-  return [
-    hoy.getFullYear(),
-    String(hoy.getMonth() + 1).padStart(2, '0'),
-    String(hoy.getDate()).padStart(2, '0')
-  ].join('-')
-}
-
 function datosIniciales() {
   return {
-    tipo: 'gasto',
+    estado: 'pagada',
     descripcion: '',
     monto: '',
     categoria: 'Otros',
     cuentaId: '',
-    fecha: fechaHoy()
+    fecha: '',
+    fechaPago: fechaLocal(),
+    avisoDias: 3,
+    vencimiento: '',
+    periodo: ''
   }
 }
 
 export default function Escaner() {
   const { cuentas, movimientos } = useFinanzas()
+  const facturas = useFacturas()
   const [leyendo, setLeyendo] = useState(false)
   const [textoDetectado, setTextoDetectado] = useState('')
-  const [archivo, setArchivo] = useState(null)
-  const [vistaPrevia, setVistaPrevia] = useState('')
+  const [{ archivo, vistaPrevia }, setImagen] = useState({ archivo: null, vistaPrevia: '' })
   const [datos, setDatos] = useState(datosIniciales)
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [confirmacion, setConfirmacion] = useState(null)
+  const pendiente = datos.estado === 'pendiente'
 
   useEffect(() => {
-    if (!archivo) {
-      setVistaPrevia('')
-      return
-    }
+    if (!vistaPrevia) return
 
-    const url = URL.createObjectURL(archivo)
-    setVistaPrevia(url)
-
-    return () => URL.revokeObjectURL(url)
-  }, [archivo])
+    return () => URL.revokeObjectURL(vistaPrevia)
+  }, [vistaPrevia])
 
   function cargarArchivo(evento) {
     const seleccionado = evento.target.files?.[0]
@@ -83,19 +73,22 @@ export default function Escaner() {
       'image/webp'
     ]
 
-    if (!permitidos.includes(seleccionado.type)) {
-      setError('Selecciona una imagen JPG, PNG o WebP.')
+    if (!esPDF(seleccionado) && !permitidos.includes(seleccionado.type)) {
+      setError('Selecciona un PDF o una imagen JPG, PNG o WebP.')
       evento.target.value = ''
       return
     }
 
     if (seleccionado.size > 5 * 1024 * 1024) {
-      setError('La imagen no puede superar los 5 MB.')
+      setError('El archivo no puede superar los 5 MB.')
       evento.target.value = ''
       return
     }
 
-    setArchivo(seleccionado)
+    setImagen({
+      archivo: seleccionado,
+      vistaPrevia: esPDF(seleccionado) ? '' : URL.createObjectURL(seleccionado)
+    })
     setDatos({
       ...datosIniciales(),
       cuentaId: cuentas[0]?.id || ''
@@ -103,104 +96,36 @@ export default function Escaner() {
 
     evento.target.value = ''
   }
-  
-async function leerFactura() {
-  if (!archivo || leyendo) return
-
-  setLeyendo(true)
-  setError('')
-  setExito('')
-  setTextoDetectado('')
-
-  let worker
-
-  try {
-    worker = await createWorker('spa+eng')
-
-    const resultado = await worker.recognize(archivo)
-    const texto = resultado.data.text || ''
-
-    setTextoDetectado(texto)
-
-    if (!texto.trim()) {
-      setError('No se pudo reconocer texto en esta imagen.')
-      return
-    }
-
-    const lineas = texto.split('\n').map(l => l.trim())
-
-    const montos = [
-      /(?:total\s*(?:a\s*pagar)?|valor\s*(?:total|pagado)?|monto|importe)\s*[:$ ]+\s*(?:COP|COL)?\s*\$?\s*([\d.,]+)/i,
-      /\$\s*([\d.,]+)/i
-    ]
-
-    let montoEncontrado = ''
-
-    for (const patron of montos) {
-      for (const linea of lineas) {
-        const coincidencia = linea.match(patron)
-        if (!coincidencia) continue
-
-        let valor = coincidencia[1]
-
-        if (valor.includes('.') && valor.includes(',')) {
-          valor = valor.lastIndexOf(',') > valor.lastIndexOf('.')
-            ? valor.replace(/\./g, '').replace(',', '.')
-            : valor.replace(/,/g, '')
-        } else if (/^\d{1,3}(?:[.,]\d{3})+$/.test(valor)) {
-          valor = valor.replace(/[.,]/g, '')
-        } else {
-          valor = valor.replace(',', '.')
-        }
-
-        if (Number(valor) > 0) {
-          montoEncontrado = valor
-          break
-        }
+  async function leerFactura() {
+    if (!archivo || leyendo) return
+    setLeyendo(true)
+    setConfirmacion(null)
+    setError('')
+    setExito('')
+    setTextoDetectado('')
+    try {
+      const texto = await leerComprobante(archivo)
+      if (!texto.trim()) {
+        setError('No se pudo reconocer texto. Puedes completar el formulario manualmente.')
+        return
       }
-
-      if (montoEncontrado) break
+      setTextoDetectado(texto)
+      const extraidos = extraerComprobante(texto)
+      setDatos(anterior => ({
+        ...anterior,
+        ...Object.fromEntries(Object.entries(extraidos).filter(([, valor]) => valor))
+      }))
+      setExito('Lectura finalizada. Confirma los datos antes de guardar.')
+    } catch (fallo) {
+      setError(fallo?.message?.startsWith('El PDF debe') ? fallo.message :
+        'No se pudo analizar el archivo. Verifica que pueda abrirse o completa el formulario manualmente.')
+    } finally {
+      setLeyendo(false)
     }
-
-    const fechaEncontrada = texto.match(
-      /\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/
-    )
-
-    let fecha = ''
-
-    if (fechaEncontrada) {
-      const [, dia, mes, anio] = fechaEncontrada
-      const posible = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`
-      const comprobacion = new Date(`${posible}T12:00:00`)
-
-      if (
-        comprobacion.getFullYear() === Number(anio) &&
-        comprobacion.getMonth() + 1 === Number(mes) &&
-        comprobacion.getDate() === Number(dia)
-      ) {
-        fecha = posible
-      }
-    }
-
-    setDatos(anterior => ({
-      ...anterior,
-      monto: montoEncontrado || anterior.monto,
-      fecha: fecha || anterior.fecha
-    }))
-
-    setExito(
-      'Lectura finalizada. Revisa los datos detectados antes de registrar.'
-    )
-  } catch {
-    setError('No se pudo analizar la imagen. Comprueba tu conexión e inténtalo nuevamente.')
-  } finally {
-    if (worker) await worker.terminate()
-    setLeyendo(false)
   }
-}
-
 
   function actualizar(campo, valor) {
+    setConfirmacion(null)
     setDatos(actual => ({
       ...actual,
       [campo]: valor
@@ -208,69 +133,30 @@ async function leerFactura() {
   }
 
   function limpiar() {
-    setArchivo(null)
+    setConfirmacion(null)
+    setImagen({ archivo: null, vistaPrevia: '' })
+    setTextoDetectado('')
     setDatos(datosIniciales())
     setError('')
   }
 
-  function registrar(evento) {
+  async function registrar(evento) {
     evento.preventDefault()
+    if (!archivo || leyendo || guardando) return
+    setGuardando(true)
     setError('')
     setExito('')
-
-    const cuenta = cuentas.find(
-      c => c.id === datos.cuentaId
-    )
-
-    const monto = Number(datos.monto)
-
-    if (!archivo) {
-      setError('Primero debes cargar una imagen.')
-      return
-    }
-
-    if (
-      !cuenta ||
-      !datos.descripcion.trim() ||
-      !datos.fecha ||
-      !Number.isFinite(monto) ||
-      monto <= 0
-    ) {
-      setError('Completa los campos con información válida.')
-      return
-    }
-
-    if (
-      datos.tipo === 'gasto' &&
-      monto > saldoActual(cuenta, movimientos)
-    ) {
-      setError('El saldo de esta cuenta es insuficiente.')
-      return
-    }
-
-    const movimiento = {
-      id: crypto.randomUUID(),
-      tipo: datos.tipo,
-      descripcion: datos.descripcion.trim(),
-      monto,
-      categoria: datos.categoria,
-      cuentaId: datos.cuentaId,
-      fecha: datos.fecha,
-      origen: 'comprobante_manual'
-    }
-
     try {
-      guardarMovimientos([
-        movimiento,
-        ...movimientos
-      ])
-
+      const huella = await huellaComprobante(archivo)
+      await confirmarFactura({ ...datos, huella }, pendiente, confirmacion)
+      if (!pendiente) avisarOrbi('gasto')
       limpiar()
-      setExito(
-        'Comprobante revisado y movimiento registrado correctamente.'
-      )
-    } catch {
-      setError('No se pudo guardar el movimiento.')
+      setExito(pendiente ? 'Recordatorio guardado en el calendario.' : 'Factura pagada. El gasto está registrado.')
+    } catch (fallo) {
+      setConfirmacion(fallo.confirmacionDuplicado ?? null)
+      setError(fallo?.message || 'No se pudo guardar la factura.')
+    } finally {
+      setGuardando(false)
     }
   }
 
@@ -324,6 +210,9 @@ async function leerFactura() {
         </div>
       )}
 
+      <FacturasPendientes facturas={facturas} cuentas={cuentas} movimientos={movimientos}
+        alPagar={mensaje => { setError(''); setExito(mensaje) }} />
+
       <section className="grid gap-6 xl:grid-cols-2">
 
         <div className="rounded-3xl border border-[#EEE7F5]
@@ -333,8 +222,7 @@ async function leerFactura() {
           </h3>
 
           <p className="mt-2 text-sm text-[#927EA6]">
-            Selecciona una fotografía legible de tu
-            recibo o factura.
+            Selecciona una imagen legible o un PDF de tu recibo o factura.
           </p>
 
           {!archivo ? (
@@ -356,20 +244,20 @@ async function leerFactura() {
               </span>
 
               <span className="mt-3 text-xs text-[#927EA6]">
-                JPG, PNG o WebP · Máximo 5 MB
+                PDF, JPG, PNG o WebP · Máximo 5 MB
               </span>
 
               <input
                 id="archivoComprobante"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="application/pdf,.pdf,image/jpeg,image/png,image/webp"
                 onChange={cargarArchivo}
                 className="sr-only"
               />
             </label>
           ) : (
             <div className="mt-6 space-y-4">
-              <div className="relative overflow-hidden
+              {vistaPrevia && <div className="relative overflow-hidden
                               rounded-2xl bg-[#F7F2FC]">
                 <img
                   src={vistaPrevia}
@@ -377,7 +265,7 @@ async function leerFactura() {
                   className="max-h-96 w-full
                              object-contain"
                 />
-              </div>
+              </div>}
 
               <div className="flex items-center
                               justify-between gap-3">
@@ -395,6 +283,7 @@ async function leerFactura() {
 
                 <button
                   onClick={limpiar}
+                  disabled={leyendo || guardando}
                   className="flex items-center gap-1
                              text-sm font-bold
                              text-[#B64B71]"
@@ -410,7 +299,7 @@ async function leerFactura() {
   <button
     type="button"
     onClick={leerFactura}
-    disabled={leyendo}
+    disabled={leyendo || guardando}
     className="mt-5 w-full rounded-xl
                bg-[#6935AE] px-5 py-3
                font-bold text-white
@@ -445,10 +334,7 @@ async function leerFactura() {
 
             <p className="mt-2 text-xs leading-5
                           text-[#806999]">
-              En esta versión, los datos no se extraen
-              automáticamente de la imagen. Debes
-              transcribirlos y verificarlos antes
-              de registrar la operación.
+              Completa o corrige los campos que la lectura no haya identificado.
             </p>
           </div>
         </div>
@@ -463,189 +349,178 @@ async function leerFactura() {
             Confirma los datos del comprobante.
           </p>
 
-          <form
-            onSubmit={registrar}
-            className="mt-6 space-y-4"
-          >
-            <div>
-              <label
-                htmlFor="escTipo"
-                className="mb-2 block text-sm font-semibold"
+          <form onSubmit={registrar} className="mt-6">
+            <fieldset disabled={leyendo || guardando} className="min-w-0 space-y-4">
+              <div>
+                <label
+                  htmlFor="escEstado"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Estado de la factura
+                </label>
+
+                <select
+                  id="escEstado"
+                  className={campo}
+                  value={datos.estado}
+                  onChange={e =>
+                    actualizar('estado', e.target.value)
+                  }
+                >
+                  <option value="pagada">Factura pagada</option>
+                  <option value="pendiente">Factura pendiente</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="escDescripcion"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Comercio o empresa
+                </label>
+
+                <input
+                  id="escDescripcion"
+                  type="text"
+                  className={campo}
+                  required
+                  maxLength={100}
+                  placeholder="Ej. Compra supermercado"
+                  value={datos.descripcion}
+                  onChange={e =>
+                    actualizar('descripcion', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="escMonto"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Total del comprobante (COP)
+                </label>
+
+                <input
+                  id="escMonto"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  className={campo}
+                  placeholder="Ej. 85000"
+                  value={datos.monto}
+                  onChange={e =>
+                    actualizar('monto', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="escCategoria"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Categoría
+                </label>
+
+                <select
+                  id="escCategoria"
+                  className={campo}
+                  value={datos.categoria}
+                  onChange={e =>
+                    actualizar('categoria', e.target.value)
+                  }
+                >
+                  {categorias.map(categoria => (
+                    <option
+                      key={categoria}
+                      value={categoria}
+                    >
+                      {categoria}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {!pendiente && (
+                <>
+                  <CuentaFactura id="escCuenta" cuentas={cuentas} movimientos={movimientos}
+                    value={datos.cuentaId} onChange={id => actualizar('cuentaId', id)} />
+                  {cuentas.length === 0 && (
+                    <p className="flex items-center gap-2 text-sm text-[#A13F56]">
+                      <Wallet size={18} /> Primero crea una cuenta o billetera.
+                    </p>
+                  )}
+                  <div>
+                    <label htmlFor="escFechaPago" className="mb-2 block text-sm font-semibold">Fecha de pago</label>
+                    <input id="escFechaPago" type="date" required className={campo} value={datos.fechaPago}
+                      onChange={e => actualizar('fechaPago', e.target.value)} />
+                  </div>
+                </>
+              )}
+              {pendiente && (
+                <div>
+                  <label htmlFor="escAviso" className="mb-2 block text-sm font-semibold">Avisar antes del vencimiento</label>
+                  <input id="escAviso" type="number" min="0" max="30" step="1" required className={campo}
+                    value={datos.avisoDias} onChange={e => actualizar('avisoDias', e.target.value)} />
+                  <p className="mt-1 text-xs text-[#927EA6]">Días de antelación. Con 0, el aviso empieza el día del vencimiento. Se muestra dentro de la aplicación.</p>
+                </div>
+              )}
+
+              <div>
+                <label
+                  htmlFor="escFecha"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Fecha de emisión
+                </label>
+
+                <input
+                  id="escFecha"
+                  type="date"
+                  className={campo}
+                  value={datos.fecha}
+                  onChange={e =>
+                    actualizar('fecha', e.target.value)
+                  }
+                />
+              </div>
+
+              <div>
+                <label htmlFor="escVencimiento" className="mb-2 block text-sm font-semibold">Fecha de vencimiento</label>
+                <input id="escVencimiento" type="date" required={pendiente} className={campo} value={datos.vencimiento}
+                  onChange={e => actualizar('vencimiento', e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="escPeriodo" className="mb-2 block text-sm font-semibold">Período facturado</label>
+                <input id="escPeriodo" maxLength={80} className={campo} value={datos.periodo}
+                  onChange={e => actualizar('periodo', e.target.value)} />
+              </div>
+
+              <button
+                type="submit"
+                disabled={!archivo || (!pendiente && !cuentas.length) || leyendo || guardando}
+                className="flex w-full items-center
+                           justify-center gap-2 rounded-xl
+                           bg-[#6935AE] py-3
+                           font-bold text-white
+                           disabled:cursor-not-allowed
+                           disabled:opacity-50"
               >
-                Tipo de movimiento
-              </label>
-
-              <select
-                id="escTipo"
-                className={campo}
-                value={datos.tipo}
-                onChange={e =>
-                  actualizar('tipo', e.target.value)
-                }
-              >
-                <option value="gasto">Gasto</option>
-                <option value="ingreso">Ingreso</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="escDescripcion"
-                className="mb-2 block text-sm font-semibold"
-              >
-                Descripción o establecimiento
-              </label>
-
-              <input
-                id="escDescripcion"
-                type="text"
-                className={campo}
-                required
-                maxLength={100}
-                placeholder="Ej. Compra supermercado"
-                value={datos.descripcion}
-                onChange={e =>
-                  actualizar('descripcion', e.target.value)
-                }
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="escMonto"
-                className="mb-2 block text-sm font-semibold"
-              >
-                Total del comprobante (COP)
-              </label>
-
-              <input
-                id="escMonto"
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
-                className={campo}
-                placeholder="Ej. 85000"
-                value={datos.monto}
-                onChange={e =>
-                  actualizar('monto', e.target.value)
-                }
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="escCategoria"
-                className="mb-2 block text-sm font-semibold"
-              >
-                Categoría
-              </label>
-
-              <select
-                id="escCategoria"
-                className={campo}
-                value={datos.categoria}
-                onChange={e =>
-                  actualizar('categoria', e.target.value)
-                }
-              >
-                {categorias.map(categoria => (
-                  <option
-                    key={categoria}
-                    value={categoria}
-                  >
-                    {categoria}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="escCuenta"
-                className="mb-2 block text-sm font-semibold"
-              >
-                Cuenta o billetera
-              </label>
-
-              <select
-                id="escCuenta"
-                className={campo}
-                required
-                value={datos.cuentaId}
-                onChange={e =>
-                  actualizar('cuentaId', e.target.value)
-                }
-              >
-                <option value="">
-                  Selecciona una cuenta
-                </option>
-
-                {cuentas.map(cuenta => (
-                  <option
-                    key={cuenta.id}
-                    value={cuenta.id}
-                  >
-                    {cuenta.nombre} — {formatoCOP(
-                      saldoActual(cuenta, movimientos)
-                    )}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {cuentas.length === 0 && (
-              <p className="flex items-center gap-2
-                            text-sm text-[#A13F56]">
-                <Wallet size={18} />
-                Primero crea una cuenta o billetera.
-              </p>
-            )}
-
-            <div>
-              <label
-                htmlFor="escFecha"
-                className="mb-2 block text-sm font-semibold"
-              >
-                Fecha del comprobante
-              </label>
-
-              <input
-                id="escFecha"
-                type="date"
-                required
-                className={campo}
-                value={datos.fecha}
-                onChange={e =>
-                  actualizar('fecha', e.target.value)
-                }
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={!archivo || !cuentas.length}
-              className="flex w-full items-center
-                         justify-center gap-2 rounded-xl
-                         bg-[#6935AE] py-3
-                         font-bold text-white
-                         disabled:cursor-not-allowed
-                         disabled:opacity-50"
-            >
-              <CheckCircle2 size={19} />
-              Confirmar y registrar movimiento
-            </button>
+                <CheckCircle2 size={19} />
+                {confirmacion ? 'Es distinto: guardar de todos modos' :
+                  pendiente ? 'Confirmar y crear recordatorio' : 'Confirmar y registrar gasto'}
+              </button>
+            </fieldset>
           </form>
         </div>
 
       </section>
 
       <p className="text-xs text-[#927EA6]">
-        La imagen se utiliza solamente como vista previa
-        durante esta sesión. No se almacena ni se envía
-        a un servidor. Se guardan únicamente los datos
-        del movimiento en el almacenamiento local
-        del navegador.
+        El archivo se procesa en esta sesión. Se guardan los datos confirmados en el navegador.
       </p>
     </div>
   )

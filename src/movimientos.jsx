@@ -1,5 +1,5 @@
 
-import { avisarOrbi } from './orbi.jsx'
+import { avisarOrbi } from './orbiEstado.js'
 import { useState } from 'react'
 import { Plus, Trash2, X, Wallet, AlertCircle } from 'lucide-react'
 import {
@@ -94,11 +94,8 @@ export default function Movimientos() {
 
     try {
       guardarMovimientos([nuevo, ...movimientos])
+      avisarOrbi(datos.tipo)
       setAbierto(false)
-
-guardarMovimientos([nuevo, ...movimientos])
-avisarOrbi(datos.tipo)
-setAbierto(false)
 
       setDatos(formularioVacio())
     } catch {

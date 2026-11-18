@@ -1,5 +1,7 @@
 
 import { useState } from 'react'
+import { useFinanzas } from './finanzas.js'
+import { eventosDeFacturas, fechaLocal, useFacturas } from './facturas.js'
 import {
   CalendarDays, ChevronLeft, ChevronRight,
   Plus, X, Trash2, CheckCircle2, Clock3
@@ -12,14 +14,6 @@ const dinero = valor => new Intl.NumberFormat('es-CO', {
   currency: 'COP',
   maximumFractionDigits: 0
 }).format(valor)
-
-function fechaLocal() {
-  const fecha = new Date()
-  const anio = fecha.getFullYear()
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
-  const dia = String(fecha.getDate()).padStart(2, '0')
-  return `${anio}-${mes}-${dia}`
-}
 
 function leerEventos() {
   try {
@@ -37,7 +31,9 @@ const vacio = () => ({
   fecha: fechaLocal()
 })
 
-export default function Calendario() {
+export default function Calendario({ abrirFacturas }) {
+  const facturas = useFacturas()
+  const { movimientos } = useFinanzas()
   const [eventos, setEventos] = useState(leerEventos)
   const [mes, setMes] = useState(() => {
     const hoy = new Date()
@@ -67,7 +63,7 @@ export default function Calendario() {
     ...Array.from({ length: totalDias }, (_, i) => i + 1)
   ]
 
-  const delMes = eventos.filter(e =>
+  const delMes = [...eventos, ...eventosDeFacturas(facturas, movimientos)].filter(e =>
     typeof e.fecha === 'string' &&
     e.fecha.startsWith(claveMes)
   )
@@ -328,7 +324,7 @@ export default function Calendario() {
                   <div>
                     <p className="font-bold">{e.nombre}</p>
                     <p className="mt-1 text-xs text-[#927EA6]">
-                      {e.fecha} · {e.tipo === 'pago'
+                      {e.fecha} · {e.esFactura ? 'Factura' : e.tipo === 'pago'
                         ? 'Pago'
                         : 'Cobro'}
                     </p>
@@ -339,6 +335,16 @@ export default function Calendario() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {e.esFactura ? (
+                      e.completado ? (
+                        <span className="rounded-lg bg-[#DCF5E9] px-3 py-2 text-xs font-bold text-[#22775B]">Pagada</span>
+                      ) : (
+                        <button type="button" onClick={abrirFacturas}
+                          className="rounded-lg bg-[#EEE4FA] px-3 py-2 text-xs font-bold text-[#713BAE]">
+                          Gestionar pago
+                        </button>
+                      )
+                    ) : <>
                     <button
                       onClick={() => cambiarEstado(e.id)}
                       className={`flex items-center gap-1
@@ -368,6 +374,7 @@ export default function Calendario() {
                     >
                       <Trash2 size={17} />
                     </button>
+                    </>}
                   </div>
                 </div>
               )

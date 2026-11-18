@@ -1,0 +1,248 @@
+/* Los temas alternativos reutilizan los espacios, clases y estados de la interfaz. */
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  --fondo: #171322;
+  --panel: #221c30;
+  --secundario: #342747;
+  --primario: #7547ae;
+  --borde: #483957;
+  --borde-activo: #ad82df;
+  --texto: #eee2fa;
+  --texto-suave: #cbbadb;
+  --peligro: #442631;
+  --texto-peligro: #ffb4c7;
+  --exito: #193e35;
+  --texto-exito: #91dec4;
+  --gradiente-inicio: #402267;
+  --gradiente-fin: #6a4596;
+}
+
+:root[data-tema="verde"] {
+  --fondo: #f0f7f4;
+  --panel: #ffffff;
+  --secundario: #deeee7;
+  --primario: #17614b;
+  --borde: #c5ded2;
+  --borde-activo: #357960;
+  --texto: #173e32;
+  --texto-suave: #456759;
+  --peligro: #fceaf0;
+  --texto-peligro: #9a314f;
+  --exito: #d8eee3;
+  --texto-exito: #22634c;
+  --gradiente-inicio: #204f3e;
+  --gradiente-fin: #478571;
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) { color: var(--texto); background: var(--fondo); }
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="bg-[#F7F5FB]"]
+) {
+  background-color: var(--fondo);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="text-[#32204F]"],
+  [class~="hover:text-[#6935AE]"]:hover,
+  [class~="text-[#58278D]"],
+  [class~="text-[#745A92]"],
+  [class~="text-[#6D3BA8]"],
+  [class~="text-[#6A36AB]"],
+  [class~="text-[#6532A6]"],
+  [class~="text-[#713BAE]"],
+  [class~="text-[#50277E]"],
+  [class~="text-[#765995]"],
+  [class~="text-[#6834A8]"],
+  [class~="text-[#7240AC]"],
+  [class~="text-[#68419A]"],
+  [class~="text-[#392054]"],
+  [class~="text-[#442268]"],
+  [class~="text-[#6C389E]"],
+  [class~="text-[#6935AE]"],
+  [class~="text-[#4A2179]"],
+  [class~="text-[#56308C]"],
+  [class~="text-[#66379E]"],
+  [class~="text-[#6B597F]"],
+  [class~="text-[#542486]"],
+  [class~="text-[#64349A]"],
+  [class~="text-[#60328F]"]
+) {
+  color: var(--texto);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="border-[#EEE8F5]"],
+  [class~="border-[#F0EBF6]"],
+  [class~="border-[#EBE5F4]"],
+  [class~="border-[#EEE7F5]"],
+  [class~="border-[#EFEAF6]"],
+  [class~="border-[#EEE7F7]"],
+  [class~="border-[#DFD1F1]"],
+  [class~="border-[#EDE5F5]"],
+  [class~="border-[#CFB7E8]"],
+  [class~="border-[#DED1F1]"],
+  [class~="border-[#F0E9F7]"],
+  [class~="border-[#E8DCF5]"],
+  .border-white
+) {
+  border-color: var(--borde);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="bg-[#EBDDFB]"],
+  [class~="hover:bg-[#F3ECFC]"]:hover,
+  [class~="bg-[#F0E6FD]"],
+  [class~="bg-[#E6D4FB]"],
+  [class~="bg-[#EDE2FB]"],
+  [class~="bg-[#F0E6FB]"],
+  [class~="bg-[#EBE0FA]"],
+  [class~="bg-[#F2E9FC]"],
+  [class~="bg-[#FCFAFF]"],
+  [class~="bg-[#EEE2FA]"],
+  [class~="bg-[#E9DDF5]"],
+  [class~="bg-[#EEE4FA]"],
+  [class~="bg-[#F3EEFA]"],
+  [class~="bg-[#F8F4FD]"],
+  [class~="hover:bg-[#EEE3FA]"]:hover,
+  [class~="bg-[#F1E8FC]"],
+  [class~="hover:bg-[#FAF7FE]"]:hover,
+  [class~="bg-[#F0E5FC]"],
+  [class~="hover:bg-[#F0E5FC]"]:hover,
+  [class~="bg-[#EEE4FB]"],
+  [class~="bg-[#FAF7FE]"],
+  [class~="bg-[#F7F2FC]"],
+  [class~="bg-[#F3ECFB]"],
+  [class~="bg-[#F0E6FC]"],
+  [class~="bg-[#F5EEFC]"],
+  [class~="hover:bg-[#F7F0FF]"]:hover,
+  [class~="bg-[#F2E8FC]"],
+  [class~="bg-[#F4EDFB]"],
+  [class~="hover:bg-[#F2E9FC]"]:hover,
+  [class~="bg-[#EEE5F8]"]
+) {
+  background-color: var(--secundario);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="text-[#967CAB]"],
+  [class~="text-[#A8A0B4]"],
+  [class~="text-[#76668E]"],
+  [class~="text-[#A08BB6]"],
+  [class~="text-[#7441B8]"],
+  [class~="text-[#877696]"],
+  [class~="text-[#9B8AAE]"],
+  [class~="text-[#806C96]"],
+  [class~="text-[#7642B8]"],
+  [class~="text-[#927DA7]"],
+  [class~="text-[#7B6392]"],
+  [class~="text-[#8650C3]"],
+  [class~="text-[#927EA6]"],
+  [class~="text-[#AA9CB8]"],
+  [class~="text-[#8E7BA4]"],
+  [class~="text-[#7540B8]"],
+  [class~="text-[#806999]"],
+  [class~="text-[#8851C6]"],
+  [class~="text-[#A18DB3]"],
+  [class~="text-[#8751C8]"],
+  [class~="text-[#8A57CA]"],
+  [class~="text-[#8852C6]"]
+) {
+  color: var(--texto-suave);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="bg-[#6935AE]"],
+  [class~="bg-[#8A57CA]"],
+  [class~="bg-[#8955CB]"]
+) {
+  background-color: var(--primario);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="from-[#452078]"],
+  [class~="from-[#8051C4]"]
+) {
+  --tw-gradient-from: var(--gradiente-inicio);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="to-[#9360D8]"],
+  [class~="to-[#B791EB]"]
+) {
+  --tw-gradient-to: var(--gradiente-fin);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="bg-[#E7A5BB]"],
+  [class~="bg-[#FDE7E7]"],
+  [class~="bg-[#FDE9ED]"],
+  [class~="hover:bg-[#FCEAF0]"]:hover,
+  [class~="hover:bg-red-50"]:hover
+) {
+  background-color: var(--peligro);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="text-[#268B75]"],
+  [class~="text-[#22775B]"],
+  [class~="text-[#237956]"],
+  [class~="text-[#21876C]"],
+  .text-emerald-700
+) {
+  color: var(--texto-exito);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="text-[#A34C73]"],
+  [class~="text-[#A54141]"],
+  [class~="text-[#BD5976]"],
+  [class~="text-[#A13F56]"],
+  [class~="text-[#B64B71]"],
+  [class~="text-[#C05A78]"],
+  [class~="text-[#B66A85]"],
+  [class~="text-[#9D5970]"],
+  .text-red-700
+) {
+  color: var(--texto-peligro);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="focus:border-[#7540B8]"]:focus,
+  [class~="border-[#8852CB]"],
+  [class~="border-[#8953C8]"]
+) {
+  border-color: var(--borde-activo);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="bg-[#DCF5E9]"],
+  [class~="bg-[#E2F5EB]"]
+) {
+  background-color: var(--exito);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="accent-[#7540B8]"]
+) {
+  accent-color: var(--borde-activo);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="from-[#F3E8FC]"]
+) {
+  --tw-gradient-from: var(--secundario);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  [class~="to-[#E8E1FF]"]
+) {
+  --tw-gradient-to: var(--secundario);
+}
+
+:root:is([data-tema="oscuro"], [data-tema="verde"]) :is(
+  .bg-white,
+  [class~="bg-white/80"]
+) {
+  background-color: var(--panel);
+}

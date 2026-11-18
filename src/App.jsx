@@ -7,7 +7,7 @@ import {
   Target, Wallet, ChartNoAxesCombined, Settings2, Bell,
   Plus, ArrowUpRight, ArrowDownLeft, Sparkles, ChevronRight,
   Menu, X, ShieldCheck, ReceiptText, PiggyBank, Heart,
-  CircleHelp, Check, TrendingUp
+  CircleHelp, TrendingUp
 } from 'lucide-react'
 
 
@@ -27,12 +27,13 @@ import Presupuestos from './presupuestos.jsx'
 import Reportes from './reportes.jsx'
 
 import Escaner from './escaner.jsx'
+import { AvisosFacturas } from './facturasUI.jsx'
+import Configuracion from './configuracionUI.jsx'
+import { CLAVE_REINICIO, reproducirSonido, useConfiguracion } from './configuracion.js'
+import './temas.css'
 
-import {
-  OrbiPanel,
-  OrbiFlotante,
-  useOrbi
-} from './orbi.jsx'
+import { OrbiPanel, OrbiFlotante } from './orbi.jsx'
+import { EVENTO_REACCION, useOrbi } from './orbiEstado.js'
 
 
 
@@ -71,6 +72,27 @@ const menu = [
 
 
 function App() {
+  const preferencias = useConfiguracion()
+
+  useEffect(() => {
+    document.documentElement.dataset.tema = preferencias.tema
+  }, [preferencias.tema])
+
+  useEffect(() => {
+    if (!preferencias.sonido) return
+    const sonar = evento => { void reproducirSonido(evento.detail.tipo) }
+    window.addEventListener(EVENTO_REACCION, sonar)
+    return () => window.removeEventListener(EVENTO_REACCION, sonar)
+  }, [preferencias.sonido])
+
+  useEffect(() => {
+    const sincronizar = evento => {
+      if (evento.key === CLAVE_REINICIO) window.location.reload()
+    }
+    window.addEventListener('storage', sincronizar)
+    return () => window.removeEventListener('storage', sincronizar)
+  }, [])
+
   const [pagina, setPagina] = useState('Inicio')
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -286,6 +308,8 @@ function eliminarMeta(id) {
 
 
 
+<AvisosFacturas abrirCalendario={() => navegar('Calendario')} />
+
 {pagina === 'Inicio' ? (
   <Dashboard
     metas={metas}
@@ -306,12 +330,14 @@ function eliminarMeta(id) {
     eliminarMeta={eliminarMeta}
   />
 ) : pagina === 'Calendario' ? (
-  <Calendario />
+  <Calendario abrirFacturas={() => navegar('Escáner inteligente')} />
 ) : pagina === 'Presupuestos' ? (
   <Presupuestos />
 ) : pagina === 'Reportes' ? (
   <Reportes />
 
+) : pagina === 'Configuración' ? (
+  <Configuracion preferencias={preferencias} />
 ) : pagina === 'Mi mascota' ? (
   <OrbiPanel />
 ) : (

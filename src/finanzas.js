@@ -83,3 +83,11 @@ export function formatoCOP(valor) {
     maximumFractionDigits: 0
   }).format(valor)
 }
+export function leerFinanzasActuales() {
+  const cuentas = JSON.parse(snapshotCuentas())
+  const movimientos = JSON.parse(snapshotMovimientos())
+  if (!Array.isArray(cuentas) || !Array.isArray(movimientos)) {
+    throw new Error('No se pudieron leer las cuentas o los movimientos.')
+  }
+  return { cuentas, movimientos }
+}
