@@ -1,16 +1,32 @@
-# React + Vite
+# Mente Ordenada V2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mente Ordenada es una aplicación web de finanzas personales que desarrollé como proyecto de aprendizaje mientras estudiaba Análisis y Desarrollo de Software en el SENA. La idea es tener en un solo lugar las cuentas, los gastos y las metas de ahorro para entender mejor cómo se mueve el dinero.
 
-Currently, two official plugins are available:
+**[Probar la demo en el navegador](https://mente-ordenada-app.vercel.app/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Selecciona **Explorar Mente Ordenada** para entrar con datos de ejemplo. Puedes probar los formularios con datos inventados. Los cambios de la demo se guardan en el navegador que estás usando.
 
-## React Compiler
+## Qué puedes hacer
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Organizar tus cuentas y billeteras y registrar ingresos, gastos y transferencias.
+- Crear metas de ahorro y presupuestos por categoría.
+- Consultar los reportes para ver en qué estás gastando.
+- Escanear una factura para que la aplicación sugiera datos como la fecha y el total. Puedes corregirlos antes de guardar.
+- Conocer a Orbi, la mascota que acompaña la experiencia.
 
-## Expanding the ESLint configuration
+## Cómo desarrollé el proyecto
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Usé React y Vite para construir la interfaz. En el proyecto practiqué cómo convertir una idea en pantallas, conectar los formularios con los módulos financieros y revisar que los movimientos coincidan con los saldos y reportes.
+
+Desarrollé Mente Ordenada con ayuda de inteligencia artificial, principalmente con ChatGPT y Codex. La usé para entender errores, explorar ideas, escribir y revisar partes del código y preparar pruebas. Yo definí qué quería que hiciera la aplicación y probé los cambios mientras aprendía cómo funcionaban.
+
+## Ejecutar el código del repositorio
+
+Con Node.js instalado, abre una terminal en el proyecto y ejecuta:
+
+```bash
+npm ci
+npm run dev
+```
+
+Abre la dirección que muestra la terminal. Para recorrer la versión preparada para el portafolio, usa el enlace de la demo.
